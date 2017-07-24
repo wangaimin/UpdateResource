@@ -20,6 +20,16 @@ namespace UpdateResource
         public string Name_update { get; set; }
 
 
+        public string Name2 { get; set; }
+
+
+
+        public string Name_zh_cn2 { get; set; }
+
+
+
+        public string Name_update2 { get; set; }
+
         public string LanguageCode { get; set; }
     }
 }

@@ -76,6 +76,7 @@
     <Compile Include="Entity\DataComm.cs" />
     <Compile Include="Entity\EntityBase.cs" />
     <Compile Include="Entity\SupplierCategory_Resource.cs" />
+    <Compile Include="Entity\SystemApplication_Resource.cs" />
     <Compile Include="Entity\SystemArea_Resource.cs" />
     <Compile Include="Entity\SystemCategory_Resource.cs" />
     <Compile Include="Entity\SystemFunction_Resource.cs" />
