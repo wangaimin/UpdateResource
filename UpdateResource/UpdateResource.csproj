@@ -73,7 +73,8 @@
   <ItemGroup>
     <Compile Include="Entity\AuditNode_Resource.cs" />
     <Compile Include="Entity\BidTool_TenderBidStatusItem_Resource.cs" />
-    <Compile Include="Entity\DataComm.cs" />
+    <Compile Include="Entity\Currency_Resource.cs" />
+    <Compile Include="Entity\ExcelDataComm.cs" />
     <Compile Include="Entity\EntityBase.cs" />
     <Compile Include="Entity\SupplierCategory_Resource.cs" />
     <Compile Include="Entity\SystemApplication_Resource.cs" />

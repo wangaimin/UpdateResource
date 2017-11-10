@@ -45,6 +45,9 @@
             this.btnAuditNode = new System.Windows.Forms.Button();
             this.btnApplication = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.cbLang = new System.Windows.Forms.ComboBox();
+            this.btnCurrence = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -107,16 +110,16 @@
             // 
             // tbResource
             // 
-            this.tbResource.Location = new System.Drawing.Point(528, 275);
+            this.tbResource.Location = new System.Drawing.Point(528, 315);
             this.tbResource.Multiline = true;
             this.tbResource.Name = "tbResource";
             this.tbResource.Size = new System.Drawing.Size(858, 72);
             this.tbResource.TabIndex = 40;
-            this.tbResource.Text = "C:\\Users\\admin\\Desktop\\法语\\品类 - 法语.xlsx";
+            this.tbResource.Text = "C:\\Gene\\项目\\UpdateResource\\翻译\\SystemCategory.xlsx";
             // 
             // btnSelect
             // 
-            this.btnSelect.Location = new System.Drawing.Point(285, 275);
+            this.btnSelect.Location = new System.Drawing.Point(285, 315);
             this.btnSelect.Name = "btnSelect";
             this.btnSelect.Size = new System.Drawing.Size(191, 72);
             this.btnSelect.TabIndex = 39;
@@ -214,11 +217,45 @@
             this.label2.TabIndex = 60;
             this.label2.Text = "新增、更新：";
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("宋体", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label3.Location = new System.Drawing.Point(281, 254);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(163, 30);
+            this.label3.TabIndex = 62;
+            this.label3.Text = "选择语言：";
+            // 
+            // cbLang
+            // 
+            this.cbLang.FormattingEnabled = true;
+            this.cbLang.Items.AddRange(new object[] {
+            "en-us",
+            "fr-fr"});
+            this.cbLang.Location = new System.Drawing.Point(528, 257);
+            this.cbLang.Name = "cbLang";
+            this.cbLang.Size = new System.Drawing.Size(306, 26);
+            this.cbLang.TabIndex = 63;
+            // 
+            // btnCurrence
+            // 
+            this.btnCurrence.Location = new System.Drawing.Point(286, 767);
+            this.btnCurrence.Name = "btnCurrence";
+            this.btnCurrence.Size = new System.Drawing.Size(191, 72);
+            this.btnCurrence.TabIndex = 64;
+            this.btnCurrence.Text = "货币资源";
+            this.btnCurrence.UseVisualStyleBackColor = true;
+            this.btnCurrence.Click += new System.EventHandler(this.btnCurrence_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1666, 804);
+            this.ClientSize = new System.Drawing.Size(1716, 909);
+            this.Controls.Add(this.btnCurrence);
+            this.Controls.Add(this.cbLang);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.btnApplication);
             this.Controls.Add(this.btnAuditNode);
@@ -262,6 +299,9 @@
         private System.Windows.Forms.Button btnAuditNode;
         private System.Windows.Forms.Button btnApplication;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ComboBox cbLang;
+        private System.Windows.Forms.Button btnCurrence;
     }
 }
 

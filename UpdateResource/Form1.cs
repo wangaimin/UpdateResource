@@ -23,7 +23,7 @@ namespace UpdateResource
         private string dbWriteConfig;
         private string dbReadConfig;
         private string languageCode;
-        Dictionary<string, DataComm> dicDistinctName = new Dictionary<string, DataComm>();
+        Dictionary<string, ExcelDataComm> dicDistinctName = new Dictionary<string, ExcelDataComm>();
 
 
         public Form1()
@@ -57,12 +57,13 @@ namespace UpdateResource
                 return false;
             }
 
-            //languageCode = tbLanguageCode.Text.Trim();
-            //if (languageCode == "")
-            //{
-            //    MessageBox.Show("语言代码不能为空！");
-            //    return false;
-            //}
+            if (cbLang.SelectedItem == null)
+            {
+                MessageBox.Show("语言代码不能为空！");
+                return false;
+            }
+            languageCode = cbLang.SelectedItem.ToString();
+
             return true;
         }
 
@@ -76,48 +77,48 @@ namespace UpdateResource
                 MessageBox.Show("excel中没有数据！");
                 return false;
             }
-            if (dt.Columns.Contains("LanguageCode"))
-            {
-                languageCode = dt.Rows[0]["LanguageCode"].ToString();
-                if (string.IsNullOrWhiteSpace(languageCode))
-                {
-                    MessageBox.Show("列LanguageCode不能为空！");
-                    return false;
-                }
-            }
-            else
-            {
-                MessageBox.Show("excel中没有列：LanguageCode！");
-                return false;
-            }
+            //if (dt.Columns.Contains("LanguageCode"))
+            //{
+            //    languageCode = dt.Rows[0]["LanguageCode"].ToString();
+            //    if (string.IsNullOrWhiteSpace(languageCode))
+            //    {
+            //        MessageBox.Show("列LanguageCode不能为空！");
+            //        return false;
+            //    }
+            //}
+            //else
+            //{
+            //    MessageBox.Show("excel中没有列：LanguageCode！");
+            //    return false;
+            //}
 
 
             for (int i = 0; i < dt.Rows.Count; i++)
             {
                 string name_zh_cn = dt.Rows[i]["name_zh_cn"].ToString();
-                string name_zh_cn2 =dt.Columns.Contains("name_zh_cn2")?dt.Rows[i]["name_zh_cn2"].ToString():string.Empty;
-                string name2 = string.Empty;
+                string name_zh_cn2 = dt.Columns.Contains("name_zh_cn2") ? dt.Rows[i]["name_zh_cn2"].ToString() : string.Empty;
+                //  string name2 = string.Empty;
                 string name_update2 = string.Empty;
                 string key = name_zh_cn;
 
                 if (!string.IsNullOrWhiteSpace(name_zh_cn2))
                 {
                     key = name_zh_cn + "ψ" + name_zh_cn2;
-                    name2 = dt.Rows[i]["name2"].ToString();
-                    name_update2 =dt.Columns.Contains("name_update2")? dt.Rows[i]["name_update2"].ToString():string.Empty;
+                    //   name2 = dt.Rows[i]["name2"].ToString();
+                    name_update2 = dt.Columns.Contains("name_update2") ? dt.Rows[i]["name_update2"].ToString() : string.Empty;
                 }
 
                 if (!dicDistinctName.ContainsKey(key))
                 {
                     dicDistinctName.Add(key,
-                        new DataComm()
+                        new ExcelDataComm()
                         {
                             LanguageCode = languageCode,
                             Name_zh_cn = name_zh_cn,
-                            Name = dt.Rows[i]["name"].ToString(),
-                            Name_update = dt.Columns.Contains("name_update") ? dt.Rows[i]["name_update"].ToString() : "",
+                            //    Name = dt.Rows[i]["name"].ToString(),
+                            Name_update = dt.Rows[i]["name_update"].ToString(),
                             Name_zh_cn2 = name_zh_cn2,
-                            Name2 = name2,
+                            //   Name2 = name2,
                             Name_update2 = name_update2
                         }
                     );
@@ -231,6 +232,9 @@ namespace UpdateResource
                                                 case CellType.String:
                                                     dataRow[j] = cell.StringCellValue;
                                                     break;
+                                                case CellType.Formula:
+                                                    dataRow[j] = cell.StringCellValue;
+                                                    break;
                                             }
                                         }
                                     }
@@ -250,6 +254,65 @@ namespace UpdateResource
                 }
                 return null;
             }
+        }
+
+        private void WriteData<T>(string updateSql, string insertSql, List<T> updateResult, List<T> insertResult) where T : class
+        {
+            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
+            {
+                conn.Open();
+                if (updateResult.Any())
+                {
+                    var resultList = new List<T>();
+                    if (updateResult.Count > 500)
+                    {
+                        foreach (var item in updateResult)
+                        {
+                            resultList.Add(item);
+                            if (resultList.Count == 500)
+                            {
+                                conn.Execute(updateSql, resultList);
+                                resultList.Clear();
+                            }
+                        }
+                        if (resultList.Any())
+                        {
+                            conn.Execute(updateSql, resultList);
+                            resultList.Clear();
+                        }
+                    }
+                    else
+                    {
+                        conn.Execute(updateSql, updateResult);
+                    }
+                }
+                if (insertResult.Any())
+                {
+                    var resultList = new List<T>();
+                    if (insertResult.Count > 500)
+                    {
+                        foreach (var item in insertResult)
+                        {
+                            resultList.Add(item);
+                            if (resultList.Count == 500)
+                            {
+                                conn.Execute(insertSql, resultList);
+                                resultList.Clear();
+                            }
+                        }
+                        if (resultList.Any())
+                        {
+                            conn.Execute(insertSql, resultList);
+                            resultList.Clear();
+                        }
+                    }
+                    else
+                    {
+                        conn.Execute(insertSql, insertResult);
+                    }
+                }
+            }
+            MessageBox.Show("成功");
         }
 
         #endregion
@@ -276,7 +339,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS SystemCategorySysNo ,[CategoryName] FROM [YZ_Operation].[dbo].[SystemCategory] WITH(NOLOCK)";
+            string querySql = "SELECT [SysNo] AS SystemCategorySysNo ,[CategoryName] FROM [YZ_Operation].[dbo].[SystemCategory] WITH(NOLOCK) WHERE CommonStatus<>-999";
 
             string updateSql = @"UPDATE    [YZ_Operation].[dbo].[SystemCategory_Resource]
                                       SET 
@@ -342,10 +405,13 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.CategoryName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.CategoryName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
+                        if (str.CategoryName.Equals(item.Key))
+                        {
+                            str.CategoryName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
                     }
                     );
                 }
@@ -367,20 +433,9 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SystemCategory_Resource>(updateSql, insertSql, updateResult, insertResult);
         }
+
 
         private void btnSupplierCategory_ResourceByName_Click(object sender, EventArgs e)
         {
@@ -392,7 +447,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS SupplierCategorySysNo ,[CategoryName] FROM [YZ_Supplier].[dbo].[SupplierCategory] WITH(NOLOCK)";
+            string querySql = "SELECT [SysNo] AS SupplierCategorySysNo ,[CategoryName] FROM [YZ_Supplier].[dbo].[SupplierCategory] WITH(NOLOCK) WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE    [YZ_Supplier].[dbo].[SupplierCategory_Resource]
@@ -460,12 +515,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.CategoryName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.CategoryName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.CategoryName.Equals(item.Key))
+                        {
+                            str.CategoryName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -484,19 +541,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SupplierCategory_Resource>(updateSql, insertSql, updateResult, insertResult);
+
         }
 
 
@@ -509,7 +555,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS SystemAreaSysNo ,[AreaName] FROM [YZ_Operation].[dbo].[SystemArea] WITH(NOLOCK)";
+            string querySql = "SELECT [SysNo] AS SystemAreaSysNo ,[AreaName] FROM [YZ_Operation].[dbo].[SystemArea] WITH(NOLOCK)  WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE    [YZ_Operation].[dbo].[SystemArea_Resource]
@@ -577,12 +623,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.AreaName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.AreaName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.AreaName.Equals(item.Key))
+                        {
+                            str.AreaName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -601,19 +649,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SystemArea_Resource>(updateSql, insertSql, updateResult, insertResult);
+
         }
 
         private void btnBidTool_TenderBidStatusItem_Click(object sender, EventArgs e)
@@ -628,12 +665,9 @@ namespace UpdateResource
             string querySql = "SELECT [SysNo] AS BidTool_TenderBidStatusItemSysNo ,[NoticeContent] FROM [YZ_Tender].[dbo].[BidTool_TenderBidStatusItem] WITH(NOLOCK) WHERE NoticeContent NOT IN ('','bid_notice','bid_tender','adjustment_notice','result','resulted')";
 
 
-            string updateSql = @"UPDATE    [YZ_Operation].[dbo].[BidTool_TenderBidStatusItem_Resource]
+            string updateSql = @"UPDATE    [YZ_Tender].[dbo].[BidTool_TenderBidStatusItem_Resource]
                                       SET 
                                            [NoticeContent] = @NoticeContent
-                                          ,[EditUserSysNo] =0
-                                          ,[EditUserName] = '王爱民'
-                                          ,[EditDate] = GETDATE()
                                      WHERE BidTool_TenderBidStatusItemSysNo=@BidTool_TenderBidStatusItemSysNo AND LanguageCode=@LanguageCode";
 
 
@@ -682,12 +716,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.NoticeContent.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.NoticeContent = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.NoticeContent.Equals(item.Key))
+                        {
+                            str.NoticeContent = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -704,21 +740,9 @@ namespace UpdateResource
                     return !queryResoureceResult.Exists(tqrr => tqrr.LanguageCode == r.LanguageCode && tqrr.BidTool_TenderBidStatusItemSysNo == r.BidTool_TenderBidStatusItemSysNo);
                 }).ToList();
             }
-
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<BidTool_TenderBidStatusItem_Resource>(updateSql, insertSql, updateResult, insertResult);
+
 
         }
 
@@ -731,15 +755,12 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS MenuSysNo ,[MenuName] FROM [YZ_AuthCenter].[dbo].[SystemMenu] WITH(NOLOCK) ";
+            string querySql = "SELECT [SysNo] AS MenuSysNo ,[MenuName] FROM [YZ_AuthCenter].[dbo].[SystemMenu] WITH(NOLOCK)  WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE   [YZ_AuthCenter].[dbo].[SystemMenu_Resource]
                                       SET 
                                            [MenuName] = @MenuName
-                                          ,[EditUserSysNo] =0
-                                          ,[EditUserName] = '王爱民'
-                                          ,[EditDate] = GETDATE()
                                      WHERE MenuSysNo=@MenuSysNo AND LanguageCode=@LanguageCode";
 
 
@@ -788,12 +809,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.MenuName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.MenuName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.MenuName.Equals(item.Key))
+                        {
+                            str.MenuName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -812,20 +835,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
-
+            WriteData<SystemMenu_Resource>(updateSql, insertSql, updateResult, insertResult);
+            
         }
 
         private void btnSystemFunction_Click(object sender, EventArgs e)
@@ -837,7 +848,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS FunctionSysNo ,[FunctionName] FROM [YZ_AuthCenter].[dbo].[SystemFunction] WITH(NOLOCK) ";
+            string querySql = "SELECT [SysNo] AS FunctionSysNo ,[FunctionName] FROM [YZ_AuthCenter].[dbo].[SystemFunction] WITH(NOLOCK)   WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE   [YZ_AuthCenter].[dbo].[SystemFunction_Resource]
@@ -891,12 +902,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.FunctionName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.FunctionName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.FunctionName.Equals(item.Key))
+                        {
+                            str.FunctionName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -915,20 +928,7 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
-
+            WriteData<SystemFunction_Resource>(updateSql, insertSql, updateResult, insertResult);
         }
 
         private void btnSystemTagRole_Click(object sender, EventArgs e)
@@ -940,7 +940,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS RoleSysNo ,[RoleName] FROM [YZ_AuthCenter].[dbo].[SystemTagRole] WITH(NOLOCK) ";
+            string querySql = "SELECT [SysNo] AS RoleSysNo ,[RoleName] FROM [YZ_AuthCenter].[dbo].[SystemTagRole] WITH(NOLOCK)  WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE   [YZ_AuthCenter].[dbo].[SystemTagRole_Resource]
@@ -991,12 +991,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.RoleName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.RoleName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.RoleName.Equals(item.Key))
+                        {
+                            str.RoleName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -1015,19 +1017,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SystemTagRole_Resource>(updateSql, insertSql, updateResult, insertResult);
+
         }
 
         private void btnApplication_Click(object sender, EventArgs e)
@@ -1090,12 +1081,14 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => str.ApplicationName.Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.ApplicationName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if (str.ApplicationName.Equals(item.Key))
+                        {
+                            str.ApplicationName = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -1114,19 +1107,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SystemApplication_Resource>(updateSql, insertSql, updateResult, insertResult);
+
         }
 
 
@@ -1139,7 +1121,7 @@ namespace UpdateResource
                 return;
             }
 
-            string querySql = "SELECT [SysNo] AS NodeSysNo ,[NodeName],ApplicationName FROM [YZ_Audit].[dbo].[AuditNode] WITH(NOLOCK) ";
+            string querySql = "SELECT [SysNo] AS NodeSysNo ,[NodeName],ApplicationName FROM [YZ_Audit].[dbo].[AuditNode] WITH(NOLOCK)  WHERE CommonStatus<>-999";
 
 
             string updateSql = @"UPDATE  [YZ_Audit].[dbo].[AuditNode_Resource]
@@ -1185,7 +1167,7 @@ namespace UpdateResource
                     MessageBox.Show("待翻译表中无数据可修改！");
                     return;
                 }
-                result = queryResult.Where(m => dicDistinctName.ContainsKey(m.NodeName+ "ψ" + m.ApplicationName)).ToList();//excel中和待翻译数据表对应的数据
+                result = queryResult.Where(m => dicDistinctName.ContainsKey(m.ApplicationName + "ψ" + m.NodeName)).ToList();//excel中和待翻译数据表对应的数据
                 if (!result.Any())
                 {
                     MessageBox.Show("待翻译表中无对应数据可翻译！(通过中文名称匹配)");
@@ -1193,13 +1175,15 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => (str.NodeName + "ψ" + str.ApplicationName).Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.NodeName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.ApplicationName = string.IsNullOrWhiteSpace(item.Value.Name_update2) ? item.Value.Name2 : item.Value.Name_update2;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if ((str.ApplicationName + "ψ" + str.NodeName).Equals(item.Key))
+                        {
+                            str.ApplicationName = item.Value.Name_update;
+                            str.NodeName = item.Value.Name_update2;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -1218,19 +1202,8 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<AuditNode_Resource>(updateSql, insertSql, updateResult, insertResult);
+
         }
 
         private void btnOrg_Click(object sender, EventArgs e)
@@ -1242,11 +1215,12 @@ namespace UpdateResource
                 return;
             }
 
-          //  string querySql = "SELECT [SysNo] AS SystemOrganizationSysNo ,[OrganizationName],OrganizationFullName FROM [YZ_AuthCenter].[dbo].[SystemOrganization] WITH(NOLOCK) ";
+            //  string querySql = "SELECT [SysNo] AS SystemOrganizationSysNo ,[OrganizationName],OrganizationFullName FROM [YZ_AuthCenter].[dbo].[SystemOrganization] WITH(NOLOCK) ";
 
+            //todo:只翻译中建股份公司
+            //string querySql = "SELECT [SysNo] AS SystemOrganizationSysNo ,[OrganizationName],OrganizationFullName FROM [YZ_AuthCenter].[dbo].[SystemOrganization] WITH(NOLOCK) WHERE OrganizationCode LIKE '01000001%' AND CommonStatus<>-999";
+            string querySql = "SELECT [SysNo] AS SystemOrganizationSysNo ,[OrganizationName],OrganizationFullName FROM [YZ_AuthCenter].[dbo].[SystemOrganization] WITH(NOLOCK) WHERE CommonStatus<>-999";
 
-            string querySql = "SELECT [SysNo] AS SystemOrganizationSysNo ,[OrganizationName],OrganizationFullName FROM [YZ_AuthCenter].[dbo].[SystemOrganization] WITH(NOLOCK) WHERE OrganizationName = '“闽联大厦”地下室及上部主体建筑、安装总承包工程'";
-            
 
 
             string updateSql = @"UPDATE  [YZ_AuthCenter].[dbo].[SystemOrganization_Resource]
@@ -1307,12 +1281,12 @@ namespace UpdateResource
                     MessageBox.Show("待翻译表中无数据可修改！");
                     return;
                 }
-                result = queryResult.Where(m => {
-
+                result = queryResult.Where(m =>
+                {
                     string key = m.OrganizationName + "ψ" + m.OrganizationFullName;
                     return dicDistinctName.ContainsKey(key);
-                    
-                    }).ToList();//excel中和待翻译数据表对应的数据
+
+                }).ToList();//excel中和待翻译数据表对应的数据
                 if (!result.Any())
                 {
                     MessageBox.Show("待翻译表中无对应数据可翻译！(通过中文名称匹配)");
@@ -1320,13 +1294,15 @@ namespace UpdateResource
                 }
                 foreach (var item in dicDistinctName)
                 {
-                    result.Where(str => (str.OrganizationName + "ψ" + str.OrganizationFullName).Equals(item.Key)).ToList().ForEach(str =>
+                    result.ForEach(str =>
                     {
-                        str.OrganizationName = string.IsNullOrWhiteSpace(item.Value.Name_update) ? item.Value.Name : item.Value.Name_update;
-                        str.OrganizationFullName = string.IsNullOrWhiteSpace(item.Value.Name_update2) ? item.Value.Name2 : item.Value.Name_update2;
-                        str.LanguageCode = languageCode;
-                    }
-                    );
+                        if ((str.OrganizationName + "ψ" + str.OrganizationFullName).Equals(item.Key))
+                        {
+                            str.OrganizationName = item.Value.Name_update;
+                            str.OrganizationFullName =item.Value.Name_update2;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
                 }
 
                 //resource表中需要update的数据
@@ -1345,20 +1321,103 @@ namespace UpdateResource
             }
 
             //写
-            using (IDbConnection conn = new SqlConnection(dbWriteConfig))
-            {
-                conn.Open();
-                if (updateResult.Any())
-                {
-                    conn.Execute(updateSql, updateResult);
-                }
-                if (insertResult.Any())
-                {
-                    conn.Execute(insertSql, insertResult);
-                }
-            }
-            MessageBox.Show("成功");
+            WriteData<SystemOrganization_Resource>(updateSql, insertSql, updateResult, insertResult);
         }
 
+        private void btnCurrence_Click(object sender, EventArgs e)
+        {
+            #region check and sql
+
+            if (!CheckData())
+            {
+                return;
+            }
+
+            string querySql = "SELECT [SysNo] AS CurrencySysNo ,[Name] FROM [YZ_Operation].[dbo].[Currency] WITH(NOLOCK) ";
+
+
+            string updateSql = @"UPDATE   [YZ_Operation].[dbo].[Currency_Resource]
+                                      SET 
+                                           [Name] = @Name
+                                     WHERE CurrencySysNo=@CurrencySysNo AND LanguageCode=@LanguageCode";
+
+            string insertSql = @"INSERT INTO [YZ_Operation].[dbo].[Currency_Resource]
+                                               ([CurrencySysNo]
+                                               ,[LanguageCode]
+                                               ,[Name]
+                                               ,[InUserSysNo]
+                                               ,[InUserName]
+                                               ,[InDate])
+                                         VALUES
+                                               (@CurrencySysNo
+                                               ,@LanguageCode
+                                               ,@Name
+                                               , '王爱民'
+                                               , GetDate()
+                                               , 0)";
+            //需要update的数据
+            string queryResourceSql = @"SELECT 
+                                               [CurrencySysNo]
+                                              ,[LanguageCode]
+                                       FROM  [YZ_Operation].[dbo].[Currency_Resource] WITH(NOLOCK)
+                                       WHERE [LanguageCode]='{0}' AND CurrencySysNo IN({1})";
+            #endregion
+
+            List<Currency_Resource> result = new List<Currency_Resource>();//excel映射到ResourceEntity后数据
+            List<Currency_Resource> updateResult = new List<Currency_Resource>();//需要update的数据
+            List<Currency_Resource> insertResult = new List<Currency_Resource>();//需要insert的数据
+
+            if (!CheckExcel())
+            {
+                return;
+            }
+
+            //读
+            using (IDbConnection conn = new SqlConnection(dbReadConfig))
+            {
+                conn.Open();
+                var queryResult = conn.Query<Currency_Resource>(querySql);
+                if (queryResult.Count() == 0)
+                {
+                    MessageBox.Show("待翻译表中无数据可修改！");
+                    return;
+                }
+                result = queryResult.Where(m => dicDistinctName.ContainsKey(m.Name)).ToList();//excel中和待翻译数据表对应的数据
+                if (!result.Any())
+                {
+                    MessageBox.Show("待翻译表中无对应数据可翻译！(通过中文名称匹配)");
+                    return;
+                }
+                foreach (var item in dicDistinctName)
+                {
+                    result.ForEach(str =>
+                    {
+                        if (str.Name.Equals(item.Key))
+                        {
+                            str.Name = item.Value.Name_update;
+                            str.LanguageCode = languageCode;
+                        }
+                    });
+                }
+
+                //resource表中需要update的数据
+                string sysNos = string.Join(",", result.Select(m => m.CurrencySysNo));
+                queryResourceSql = string.Format(queryResourceSql, languageCode, sysNos);
+                var queryResoureceResult = conn.Query<Currency_Resource>(queryResourceSql).ToList();
+                updateResult = result.Where(r =>
+                {
+                    return queryResoureceResult.Exists(tqrr => tqrr.LanguageCode == r.LanguageCode && tqrr.CurrencySysNo == r.CurrencySysNo);
+                }).ToList();
+                //resource表中需要insert的数据
+                insertResult = result.Where(r =>
+                {
+                    return !queryResoureceResult.Exists(tqrr => tqrr.LanguageCode == r.LanguageCode && tqrr.CurrencySysNo == r.CurrencySysNo);
+                }).ToList();
+            }
+
+            //写
+            WriteData<Currency_Resource>(updateSql, insertSql, updateResult, insertResult);
+
+        }
     }
 }
